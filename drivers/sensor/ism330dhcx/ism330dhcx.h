@@ -42,6 +42,10 @@ struct ism330dhcx_config {
 #ifdef CONFIG_ISM330DHCX_TRIGGER
 	uint8_t int_pin;
 	struct gpio_dt_spec drdy_gpio;
+#ifdef CONFIG_ISM330DHCX_FREEFALL
+	uint8_t freefall_duration;
+	uint8_t freefall_threshold;
+#endif /* CONFIG_ISM330DHCX_FREEFALL */
 #endif /* CONFIG_ISM330DHCX_TRIGGER */
 #if DT_ANY_INST_ON_BUS_STATUS_OKAY(i2c)
 	struct i2c_dt_spec i2c;
@@ -98,6 +102,9 @@ struct ism330dhcx_data {
 	sensor_trigger_handler_t handler_drdy_acc;
 	sensor_trigger_handler_t handler_drdy_gyr;
 	sensor_trigger_handler_t handler_drdy_temp;
+#ifdef CONFIG_ISM330DHCX_FREEFALL
+	sensor_trigger_handler_t handler_freefall;
+#endif /* CONFIG_ISM330DHCX_FREEFALL */
 
 #if defined(CONFIG_ISM330DHCX_TRIGGER_OWN_THREAD)
 	K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_ISM330DHCX_THREAD_STACK_SIZE);
