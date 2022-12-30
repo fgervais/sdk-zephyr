@@ -253,11 +253,52 @@ static int ism330dhcx_gyro_config(const struct device *dev,
 	return 0;
 }
 
+#ifdef CONFIG_ISM330DHCX_FREEFALL
+static int ism330dhcx_attr_set_ff_dur(const struct device *dev,
+					enum sensor_channel chan,
+					enum sensor_attribute attr,
+					const struct sensor_value *val)
+{
+	int rc;
+	uint16_t duration;
+	const struct ism330dhcx_device_config *cfg = dev->config;
+	struct ism330dhcx_data *ism330dhcx = dev->data;
+	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
+
+	LOG_DBG("%s on channel %d", __func__, chan);
+
+	/* can only be set for all directions at once */
+	if (chan != SENSOR_CHAN_ACCEL_XYZ) {
+		return -EINVAL;
+	}
+
+	/**
+	 * The given duration in milliseconds with the val
+	 * parameter is converted into register specific value.
+	 */
+	duration = (ism330dhcx->odr * (uint16_t)sensor_value_to_double(val)) / 1000;
+
+	LOG_DBG("Freefall: duration is %d ms", (uint16_t)sensor_value_to_double(val));
+	rc = ism330dhcx_ff_dur_set(ism330dhcx->ctx, duration);
+	if (rc != 0) {
+		LOG_ERR("Failed to set freefall duration");
+		return -EIO;
+	}
+	return rc;
+}
+#endif
+
 static int ism330dhcx_attr_set(const struct device *dev,
 			       enum sensor_channel chan,
 			       enum sensor_attribute attr,
 			       const struct sensor_value *val)
 {
+#ifdef CONFIG_ISM330DHCX_FREEFALL
+	if (attr == SENSOR_ATTR_FF_DUR) {
+		return ism330dhcx_attr_set_ff_dur(dev, chan, attr, val);
+	}
+#endif
+
 	switch (chan) {
 	case SENSOR_CHAN_ACCEL_XYZ:
 		return ism330dhcx_accel_config(dev, chan, attr, val);

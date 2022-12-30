@@ -89,4 +89,9 @@ config ISM330DHCX_EXT_LPS22HB
 
 endif # ISM330DHCX_SENSORHUB
 
+config ISM330DHCX_FREEFALL
+	bool "Free Fall detection (via interrupt)"
+	help
+	  Enable freefall detection via interrupt.
+
 endif # ISM330DHCX

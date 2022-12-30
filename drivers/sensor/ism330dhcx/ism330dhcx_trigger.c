@@ -119,6 +119,36 @@ static int ism330dhcx_enable_g_int(const struct device *dev, int enable)
 	}
 }
 
+#if defined(CONFIG_ISM330DHCX_FREEFALL)
+/**
+ * ism330dhcx_enable_freefall_int - FREEFALL enable selected int pin to generate interrupt
+ */
+static int ism330dhcx_enable_freefall_int(const struct device *dev, int enable)
+{
+	const struct ism330dhcx_config *cfg = dev->config;
+	struct ism330dhcx_data *ism330dhcx = dev->data;
+
+	/* set interrupt */
+	if (cfg->int_pin == 1) {
+		ism330dhcx_pin_int1_route_t int1_route;
+
+		ism330dhcx_read_reg(ism330dhcx->ctx, ISM330DHCX_MD1_CFG,
+				    (uint8_t *)&int1_route.md1_cfg, 1);
+		int1_route.md1_cfg.int1_ff = enable;
+		return ism330dhcx_write_reg(ism330dhcx->ctx, ISM330DHCX_MD1_CFG,
+					    (uint8_t *)&int1_route.md1_cfg, 1);
+	} else {
+		ism330dhcx_pin_int2_route_t int2_route;
+
+		ism330dhcx_read_reg(ism330dhcx->ctx, ISM330DHCX_MD2_CFG,
+				    (uint8_t *)&int2_route.md2_cfg, 1);
+		int2_route.md2_cfg.int2_ff = enable;
+		return ism330dhcx_write_reg(ism330dhcx->ctx, ISM330DHCX_MD2_CFG,
+					    (uint8_t *)&int2_route.md2_cfg, 1);
+	}
+}
+#endif
+
 /**
  * ism330dhcx_trigger_set - link external trigger to event data ready
  */
@@ -158,6 +188,17 @@ int ism330dhcx_trigger_set(const struct device *dev,
 		}
 	}
 #endif
+#if defined(CONFIG_ISM330DHCX_FREEFALL)
+	else if (trig->type == SENSOR_TRIG_FREEFALL) {
+		LOG_DBG("Set freefall %d (handler: %p)\n", trig->type, handler);
+		ism330dhcx->handler_freefall = handler;
+		if (handler) {
+			return ism330dhcx_enable_freefall_int(dev, ISM330DHCX_EN_BIT);
+		} else {
+			return ism330dhcx_enable_freefall_int(dev, ISM330DHCX_DIS_BIT);
+		}
+	}
+#endif /* CONFIG_ISM330DHCX_FREEFALL */
 
 	return -ENOTSUP;
 }
@@ -172,34 +213,48 @@ static void ism330dhcx_handle_interrupt(const struct device *dev)
 	struct sensor_trigger drdy_trigger = {
 		.type = SENSOR_TRIG_DATA_READY,
 	};
+#if defined(CONFIG_ISM330DHCX_FREEFALL)
+	struct sensor_trigger freefall_trigger = {
+		.type = SENSOR_TRIG_FREEFALL,
+		.chan = SENSOR_CHAN_ALL,
+	};
+#endif
 	const struct ism330dhcx_config *cfg = dev->config;
-	ism330dhcx_status_reg_t status;
+	ism330dhcx_all_sources_t sources;
 
 	while (1) {
-		if (ism330dhcx_status_reg_get(ism330dhcx->ctx, &status) < 0) {
-			LOG_DBG("failed reading status reg");
+		if (ism330dhcx_all_sources_get(ism330dhcx->ctx, &sources) < 0) {
+			LOG_DBG("failed reading interrupt flags");
 			return;
 		}
 
-		if ((status.xlda == 0) && (status.gda == 0)
+		if ((sources.status_reg.xlda == 0) && (sources.status_reg.gda == 0)
 #if defined(CONFIG_ISM330DHCX_ENABLE_TEMP)
-					&& (status.tda == 0)
+					&& (sources.status_reg.tda == 0)
+#endif
+#if defined(CONFIG_ISM330DHCX_FREEFALL)
+					&& (sources.all_int_src.ff_ia == 0)
 #endif
 					) {
 			break;
 		}
 
-		if ((status.xlda) && (ism330dhcx->handler_drdy_acc != NULL)) {
+		if ((sources.status_reg.xlda) && (ism330dhcx->handler_drdy_acc != NULL)) {
 			ism330dhcx->handler_drdy_acc(dev, &drdy_trigger);
 		}
 
-		if ((status.gda) && (ism330dhcx->handler_drdy_gyr != NULL)) {
+		if ((sources.status_reg.gda) && (ism330dhcx->handler_drdy_gyr != NULL)) {
 			ism330dhcx->handler_drdy_gyr(dev, &drdy_trigger);
 		}
 
 #if defined(CONFIG_ISM330DHCX_ENABLE_TEMP)
-		if ((status.tda) && (ism330dhcx->handler_drdy_temp != NULL)) {
+		if ((sources.status_reg.tda) && (ism330dhcx->handler_drdy_temp != NULL)) {
 			ism330dhcx->handler_drdy_temp(dev, &drdy_trigger);
+		}
+#endif
+#if defined(CONFIG_ISM330DHCX_FREEFALL)
+		if ((sources.all_int_src.ff_ia) && (ism330dhcx->handler_freefall != NULL)) {
+			ism330dhcx->handler_freefall(dev, &freefall_trigger);
 		}
 #endif
 	}
@@ -245,6 +300,34 @@ static void ism330dhcx_work_cb(struct k_work *work)
 }
 #endif /* CONFIG_ISM330DHCX_TRIGGER_GLOBAL_THREAD */
 
+#ifdef CONFIG_ISM330DHCX_FREEFALL
+static int ism330dhcx_ff_init(const struct device *dev)
+{
+	int rc;
+	const struct ism330dhcx_config *cfg = dev->config;
+	struct ism330dhcx_data *ism330dhcx = dev->data;
+	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
+	uint16_t duration;
+
+	duration = (ism330dhcx->odr * cfg->freefall_duration) / 1000;
+
+	LOG_DBG("FREEFALL: duration is %d ms", cfg->freefall_duration);
+	rc = ism330dhcx_ff_dur_set(ism330dhcx->ctx, duration);
+	if (rc != 0) {
+		LOG_ERR("Failed to set freefall duration");
+		return -EIO;
+	}
+
+	LOG_DBG("FREEFALL: threshold is %02x", cfg->freefall_threshold);
+	rc = ism330dhcx_ff_threshold_set(ctx, cfg->freefall_threshold);
+	if (rc != 0) {
+		LOG_ERR("Failed to set freefall thrshold");
+		return -EIO;
+	}
+	return 0;
+}
+#endif /* CONFIG_ISM330DHCX_FREEFALL */
+
 int ism330dhcx_init_interrupt(const struct device *dev)
 {
 	struct ism330dhcx_data *ism330dhcx = dev->data;
@@ -288,6 +371,13 @@ int ism330dhcx_init_interrupt(const struct device *dev)
 		LOG_ERR("Could not set pulse mode");
 		return -EIO;
 	}
+
+#ifdef CONFIG_ISM330DHCX_FREEFALL
+	ret = ism330dhcx_ff_init(dev);
+		if (ret < 0) {
+			return ret;
+		}
+#endif /* CONFIG_ISM330DHCX_FREEFALL */
 
 	return gpio_pin_interrupt_configure_dt(&cfg->drdy_gpio, GPIO_INT_EDGE_TO_ACTIVE);
 }
