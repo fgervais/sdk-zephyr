@@ -306,20 +306,16 @@ static int ism330dhcx_ff_init(const struct device *dev)
 	int rc;
 	const struct ism330dhcx_config *cfg = dev->config;
 	struct ism330dhcx_data *ism330dhcx = dev->data;
-	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
-	uint16_t duration;
-
-	duration = (ism330dhcx->odr * cfg->freefall_duration) / 1000;
-
-	LOG_DBG("FREEFALL: duration is %d ms", cfg->freefall_duration);
-	rc = ism330dhcx_ff_dur_set(ism330dhcx->ctx, duration);
+	
+	LOG_DBG("FREEFALL: duration is %d", cfg->freefall_duration);
+	rc = ism330dhcx_ff_dur_set(ism330dhcx->ctx, cfg->freefall_duration);
 	if (rc != 0) {
 		LOG_ERR("Failed to set freefall duration");
 		return -EIO;
 	}
 
 	LOG_DBG("FREEFALL: threshold is %02x", cfg->freefall_threshold);
-	rc = ism330dhcx_ff_threshold_set(ctx, cfg->freefall_threshold);
+	rc = ism330dhcx_ff_threshold_set(ism330dhcx->ctx, cfg->freefall_threshold);
 	if (rc != 0) {
 		LOG_ERR("Failed to set freefall thrshold");
 		return -EIO;
