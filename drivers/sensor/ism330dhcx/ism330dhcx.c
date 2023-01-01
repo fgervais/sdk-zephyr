@@ -260,10 +260,7 @@ static int ism330dhcx_attr_set_ff_dur(const struct device *dev,
 					const struct sensor_value *val)
 {
 	int rc;
-	uint16_t duration;
-	const struct ism330dhcx_device_config *cfg = dev->config;
 	struct ism330dhcx_data *ism330dhcx = dev->data;
-	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
 
 	LOG_DBG("%s on channel %d", __func__, chan);
 
@@ -272,14 +269,8 @@ static int ism330dhcx_attr_set_ff_dur(const struct device *dev,
 		return -EINVAL;
 	}
 
-	/**
-	 * The given duration in milliseconds with the val
-	 * parameter is converted into register specific value.
-	 */
-	duration = (ism330dhcx->odr * (uint16_t)sensor_value_to_double(val)) / 1000;
-
-	LOG_DBG("Freefall: duration is %d ms", (uint16_t)sensor_value_to_double(val));
-	rc = ism330dhcx_ff_dur_set(ism330dhcx->ctx, duration);
+	LOG_DBG("Freefall: duration is %d", (uint16_t)sensor_value_to_double(val));
+	rc = ism330dhcx_ff_dur_set(ism330dhcx->ctx, (uint16_t)sensor_value_to_double(val));
 	if (rc != 0) {
 		LOG_ERR("Failed to set freefall duration");
 		return -EIO;
