@@ -172,7 +172,6 @@ static void ism330dhcx_handle_interrupt(const struct device *dev)
 	struct sensor_trigger drdy_trigger = {
 		.type = SENSOR_TRIG_DATA_READY,
 	};
-	const struct ism330dhcx_config *cfg = dev->config;
 	ism330dhcx_status_reg_t status;
 
 	while (1) {
@@ -203,8 +202,6 @@ static void ism330dhcx_handle_interrupt(const struct device *dev)
 		}
 #endif
 	}
-
-	gpio_pin_interrupt_configure_dt(&cfg->drdy_gpio, GPIO_INT_EDGE_TO_ACTIVE);
 }
 
 static void ism330dhcx_gpio_callback(const struct device *dev,
@@ -212,11 +209,8 @@ static void ism330dhcx_gpio_callback(const struct device *dev,
 {
 	struct ism330dhcx_data *ism330dhcx =
 		CONTAINER_OF(cb, struct ism330dhcx_data, gpio_cb);
-	const struct ism330dhcx_config *cfg = ism330dhcx->dev->config;
 
 	ARG_UNUSED(pins);
-
-	gpio_pin_interrupt_configure_dt(&cfg->drdy_gpio, GPIO_INT_DISABLE);
 
 #if defined(CONFIG_ISM330DHCX_TRIGGER_OWN_THREAD)
 	k_sem_give(&ism330dhcx->gpio_sem);
@@ -257,7 +251,7 @@ int ism330dhcx_init_interrupt(const struct device *dev)
 	}
 
 #if defined(CONFIG_ISM330DHCX_TRIGGER_OWN_THREAD)
-	k_sem_init(&ism330dhcx->gpio_sem, 0, K_SEM_MAX_LIMIT);
+	k_sem_init(&ism330dhcx->gpio_sem, 0, 1);
 
 	k_thread_create(&ism330dhcx->thread, ism330dhcx->thread_stack,
 			CONFIG_ISM330DHCX_THREAD_STACK_SIZE,
