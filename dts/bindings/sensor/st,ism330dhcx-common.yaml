@@ -13,7 +13,7 @@ properties:
         The property value should ensure the flags properly describe
         the signal that is presented to the driver.
 
-    int-pin:
+    drdy-int-pin:
       type: int
       default: 1
       description: |

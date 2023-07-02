@@ -40,7 +40,7 @@ struct ism330dhcx_config {
 	uint8_t accel_range;
 	uint16_t gyro_range;
 #ifdef CONFIG_ISM330DHCX_TRIGGER
-	uint8_t int_pin;
+	uint8_t drdy_int_pin;
 	struct gpio_dt_spec drdy_gpio;
 #ifdef CONFIG_ISM330DHCX_FREEFALL
 	uint8_t freefall_duration;

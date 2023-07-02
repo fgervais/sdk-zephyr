@@ -37,7 +37,7 @@ static int ism330dhcx_enable_t_int(const struct device *dev, int enable)
 	}
 
 	/* set interrupt (TEMP DRDY interrupt is only on INT2) */
-	if (cfg->int_pin == 1)
+	if (cfg->drdy_int_pin == 1)
 		return -EIO;
 
 	ism330dhcx_read_reg(ism330dhcx->ctx, ISM330DHCX_INT2_CTRL,
@@ -64,7 +64,7 @@ static int ism330dhcx_enable_xl_int(const struct device *dev, int enable)
 	}
 
 	/* set interrupt */
-	if (cfg->int_pin == 1) {
+	if (cfg->drdy_int_pin == 1) {
 		ism330dhcx_pin_int1_route_t int1_route;
 
 		ism330dhcx_read_reg(ism330dhcx->ctx, ISM330DHCX_INT1_CTRL,
@@ -100,7 +100,7 @@ static int ism330dhcx_enable_g_int(const struct device *dev, int enable)
 	}
 
 	/* set interrupt */
-	if (cfg->int_pin == 1) {
+	if (cfg->drdy_int_pin == 1) {
 		ism330dhcx_pin_int1_route_t int1_route;
 
 		ism330dhcx_read_reg(ism330dhcx->ctx, ISM330DHCX_INT1_CTRL,
@@ -129,7 +129,7 @@ static int ism330dhcx_enable_freefall_int(const struct device *dev, int enable)
 	struct ism330dhcx_data *ism330dhcx = dev->data;
 
 	/* set interrupt */
-	if (cfg->int_pin == 1) {
+	if (cfg->drdy_int_pin == 1) {
 		ism330dhcx_pin_int1_route_t int1_route;
 
 		ism330dhcx_read_reg(ism330dhcx->ctx, ISM330DHCX_MD1_CFG,

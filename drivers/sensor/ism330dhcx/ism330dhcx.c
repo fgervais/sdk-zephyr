@@ -813,7 +813,7 @@ static int ism330dhcx_init(const struct device *dev)
 			    ())									\
 		IF_ENABLED(CONFIG_ISM330DHCX_TRIGGER,						\
 			   (.drdy_gpio = GPIO_DT_SPEC_INST_GET_OR(inst, drdy_gpios, { 0 }),	\
-			    .int_pin = DT_INST_PROP_OR(inst, int_pin, 0),))			\
+			    .drdy_int_pin = DT_INST_PROP_OR(inst, drdy_int_pin, 0),))			\
 	};											\
 												\
 	SENSOR_DEVICE_DT_INST_DEFINE(inst, ism330dhcx_init, NULL,				\
