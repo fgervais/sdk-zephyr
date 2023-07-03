@@ -43,6 +43,8 @@ struct ism330dhcx_config {
 	uint8_t drdy_int_pin;
 	struct gpio_dt_spec drdy_gpio;
 #ifdef CONFIG_ISM330DHCX_FREEFALL
+	uint8_t freefall_int_pin;
+	struct gpio_dt_spec freefall_gpio;
 	uint8_t freefall_duration;
 	uint8_t freefall_threshold;
 #endif /* CONFIG_ISM330DHCX_FREEFALL */
