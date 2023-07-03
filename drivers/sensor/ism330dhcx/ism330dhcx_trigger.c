@@ -129,7 +129,7 @@ static int ism330dhcx_enable_freefall_int(const struct device *dev, int enable)
 	struct ism330dhcx_data *ism330dhcx = dev->data;
 
 	/* set interrupt */
-	if (cfg->drdy_int_pin == 1) {
+	if (cfg->freefall_int_pin == 1) {
 		ism330dhcx_pin_int1_route_t int1_route;
 
 		ism330dhcx_read_reg(ism330dhcx->ctx, ISM330DHCX_MD1_CFG,
