@@ -991,6 +991,14 @@ static int ssd16xx_pm_action(const struct device *dev,
 		break;
 
 	case PM_DEVICE_ACTION_SUSPEND:
+		ssd16xx_busy_wait(dev);
+		err = ssd16xx_write_uint8(dev, SSD16XX_CMD_SLEEP_MODE, 1);
+		if (err < 0) {
+			return err;
+		}
+
+		k_msleep(SSD16XX_BUSY_DELAY);
+
 		err = gpio_pin_set_dt(&config->reset_gpio, 1);
 		if (err < 0) {
 			return err;
